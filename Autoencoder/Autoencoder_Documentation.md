@@ -362,39 +362,6 @@ reconstruction_errors = np.mean(np.square(X_scaled - predictions), axis=1)
 
 ---
 
-## Model Deployment
-
-### Cell 28: Production-Ready Artifacts
-
-**Model Persistence:**
-
-```python
-best_model.save('enhanced_inventory_autoencoder.keras')
-joblib.dump(scaler, 'robust_scaler_inventory.pkl')
-joblib.dump(enhanced_model_config, 'enhanced_inventory_autoencoder_config.pkl')
-```
-
-**Why These Artifacts?**
-
-- **.keras Format**: Modern, efficient, includes architecture and weights
-- **Separate Scaler**: Ensures identical preprocessing for new data
-- **Configuration File**: Complete metadata for reproducible inference
-
-**Feature Engineering Pipeline:**
-
-```python
-def create_inventory_features(data):
-    # Complete feature engineering pipeline
-```
-
-**Why Packaged Pipeline?**
-
-- **Reproducibility**: Identical feature engineering for training and inference
-- **Maintainability**: Single source of truth for data processing
-- **Production Safety**: Reduces deployment errors
-
----
-
 ## Technical Decisions Explained
 
 ### Library Choices
