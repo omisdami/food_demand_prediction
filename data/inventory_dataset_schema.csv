@@ -1,0 +1,10 @@
+Column Name,Data Type,Description
+delivery_date,Date,The date when inventory is received (Monday or Saturday). This is the prediction reference point.
+wings,Integer,Total number of chicken wings required for the delivery window.
+tenders,Integer,Total number of chicken tenders required for the delivery window.
+fries_reg,Integer,Total number of regular fries portions needed.
+fries_large,Integer,Total number of large fries portions needed.
+veggies,Integer,Total number of veggie stick portions needed.
+dips,Integer,Total number of dip servings required.
+drinks,Integer,Total number of fountain drinks required.
+flavours,Integer,Total number of flavour/sauce servings required.
