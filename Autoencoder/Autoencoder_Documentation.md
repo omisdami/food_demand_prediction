@@ -1,6 +1,7 @@
 # Enhanced Inventory Autoencoder: Complete Technical Documentation
 
 ## Table of Contents
+
 1. [Project Overview](#project-overview)
 2. [Data Loading & Preprocessing](#data-loading--preprocessing)
 3. [Feature Engineering](#feature-engineering)
@@ -17,7 +18,9 @@
 ## Project Overview
 
 ### What We're Building
+
 An **autoencoder-based anomaly detection system** for restaurant inventory delivery windows. The system identifies unusual patterns in inventory ordering that could indicate:
+
 - Supply chain disruptions
 - Demand forecasting errors
 - Operational inefficiencies
@@ -25,7 +28,9 @@ An **autoencoder-based anomaly detection system** for restaurant inventory deliv
 - Inventory management issues
 
 ### Why Autoencoders?
+
 **Autoencoders** are neural networks trained to reconstruct their input. They learn to compress data into a lower-dimensional representation (encoding) and then reconstruct it (decoding). For anomaly detection:
+
 - **Normal patterns** are reconstructed accurately (low reconstruction error)
 - **Anomalous patterns** are reconstructed poorly (high reconstruction error)
 - **Unsupervised learning** - no need for labeled anomaly examples
@@ -42,11 +47,13 @@ df = pd.read_csv('data/inventory_delivery_forecast_data.csv')
 ```
 
 **Why This Dataset?**
+
 - Contains actual inventory categories: wings, tenders, fries, veggies, dips, drinks, flavours
 - Reflects real business delivery schedule (Monday/Saturday)
 - Includes temporal patterns crucial for anomaly detection
 
 **Temporal Feature Extraction:**
+
 ```python
 df['month'] = df['delivery_date'].dt.month
 df['day_of_week'] = df['delivery_date'].dt.dayofweek
@@ -55,17 +62,20 @@ df['is_saturday'] = (df['delivery_date'].dt.dayofweek == 5).astype(int)
 ```
 
 **Why These Features?**
+
 - **Seasonality**: Restaurant demand varies by month/season
 - **Weekly Patterns**: Different inventory needs for Monday vs Saturday deliveries
 - **Business Logic**: Delivery schedule is fixed to these two days
 
 **Inventory Ratios:**
+
 ```python
 df['protein_ratio'] = (df['wings'] + df['tenders']) / df['total_inventory']
 df['sides_ratio'] = (df['fries_reg'] + df['fries_large'] + df['veggies']) / df['total_inventory']
 ```
 
 **Why Ratios Matter?**
+
 - **Scale Independence**: Ratios remain consistent regardless of total volume
 - **Pattern Recognition**: Unusual proportions indicate operational changes
 - **Business Insight**: Helps identify which categories are driving anomalies
@@ -77,6 +87,7 @@ df['sides_ratio'] = (df['fries_reg'] + df['fries_large'] + df['veggies']) / df['
 ### Cell 8: Lag and Rolling Features
 
 **Lag Features:**
+
 ```python
 for item in ['wings', 'tenders', 'total_inventory']:
     df_sorted[f'{item}_lag1'] = df_sorted[item].shift(1)
@@ -84,17 +95,20 @@ for item in ['wings', 'tenders', 'total_inventory']:
 ```
 
 **Why Lag Features?**
+
 - **Temporal Dependencies**: Previous deliveries influence current orders
 - **Trend Detection**: Helps identify gradual changes in ordering patterns
 - **Business Context**: Inventory managers consider historical data
 
 **Rolling Statistics:**
+
 ```python
 df_sorted['total_inventory_rolling_mean'] = df_sorted['total_inventory'].shift(1).rolling(window=4).mean()
 df_sorted['wings_rolling_std'] = df_sorted['wings'].shift(1).rolling(window=4).std()
 ```
 
 **Why Rolling Statistics?**
+
 - **Trend Analysis**: Rolling means smooth out noise and show trends
 - **Volatility Measurement**: Rolling standard deviation captures variability
 - **Window Size (4)**: Represents 2 weeks of deliveries (practical business cycle)
@@ -112,52 +126,102 @@ X_scaled = scaler.fit_transform(X)
 ```
 
 **Why RobustScaler over MinMaxScaler or StandardScaler?**
+
 - **Outlier Resistance**: Uses median and IQR instead of mean and std
 - **Inventory Data**: Restaurant inventory often has outliers (special events, holidays)
 - **Better Generalization**: Less affected by extreme values during training
 
 ### Cell 12: Enhanced Autoencoder Architecture
 
-**Architecture Design:**
 ```python
 def create_improved_autoencoder(trial):
     n_layers = trial.suggest_int('n_layers', 2, 4)
     encoder_units = trial.suggest_int('encoder_units', 32, 128, step=16)
     latent_dim = trial.suggest_int('latent_dim', 8, 24)
+    dropout_rate = trial.suggest_float('dropout_rate', 0.1, 0.4)
+    learning_rate = trial.suggest_float('learning_rate', 1e-4, 1e-2, log=True)
+    activation = trial.suggest_categorical('activation', ['relu', 'elu', 'swish'])
+    l2_reg = trial.suggest_float('l2_regularization', 1e-6, 1e-3, log=True)
+
+    # Input layer
+    input_dim = X_train.shape[1]
+    inputs = Input(shape=(input_dim,))
+
+    # Encoder
+    x = inputs
+    for i in range(n_layers):
+        units = encoder_units // (2**i)
+        x = Dense(units, activation=activation, kernel_regularizer=l2(l2_reg))(x)
+        x = Dropout(dropout_rate)(x)
+
+    # Bottleneck
+    encoded = Dense(latent_dim, activation=activation, kernel_regularizer=l2(l2_reg), name='bottleneck')(x)
+
+    # Decoder
+    x = encoded
+    decoder_layers = []
+    for i in range(n_layers):
+        units = encoder_units // (2**(n_layers-i-1))
+        x = Dense(units, activation=activation, kernel_regularizer=l2(l2_reg))(x)
+        x = Dropout(dropout_rate)(x)
+        decoder_layers.append(x)
+
+    # Output
+    outputs = Dense(input_dim, activation='linear')(x)
+
+    # Model
+    model = Model(inputs=inputs, outputs=outputs)
+    optimizer = Adam(learning_rate=learning_rate, clipnorm=1.0)
+    model.compile(optimizer=optimizer, loss='huber', metrics=['mae'])
+
+    return model
 ```
 
+**Key Details from Implementation:**
+
+- Uses **Adam** with gradient clipping
+- Bottleneck layer activation matches encoder
+- Decoder layers created sequentially (skip connections placeholder present but not connected)
+
 **Why These Layer Sizes?**
+
 - **2-4 Layers**: Deep enough to learn complex patterns, shallow enough to avoid overfitting
 - **32-128 Units**: Sufficient capacity for inventory pattern complexity
 - **8-24 Latent Dimensions**: Compressed representation that retains essential information
 
 **Regularization Techniques:**
+
 ```python
 dropout_rate = trial.suggest_float('dropout_rate', 0.1, 0.4)
 l2_reg = trial.suggest_float('l2_regularization', 1e-6, 1e-3, log=True)
 ```
 
 **Why Dropout and L2 Regularization?**
+
 - **Dropout (0.1-0.4)**: Prevents overfitting by randomly setting neurons to zero
 - **L2 Regularization**: Penalizes large weights, promotes smoother decision boundaries
 - **Combined Effect**: Better generalization to unseen inventory patterns
 
 **Activation Function Choice:**
+
 ```python
 activation = trial.suggest_categorical('activation', ['relu', 'elu', 'swish'])
 ```
 
 **Why These Activations?**
+
 - **ReLU**: Fast, simple, works well for most cases
 - **ELU**: Smooth, handles negative values better, reduces vanishing gradient
 - **Swish**: Self-gated, smooth, often performs better than ReLU
 
 **Loss Function:**
+
 ```python
 model.compile(optimizer=optimizer, loss='huber', metrics=['mae'])
 ```
 
 **Why Huber Loss?**
+
 - **Robust to Outliers**: Less sensitive to extreme values than MSE
 - **Smooth**: Differentiable everywhere (unlike MAE)
 - **Inventory Context**: Handles occasional extreme orders without skewing training
@@ -172,26 +236,39 @@ model.compile(optimizer=optimizer, loss='huber', metrics=['mae'])
 from optuna.samplers import TPESampler
 study = optuna.create_study(direction='minimize', sampler=TPESampler(seed=42))
 study.optimize(enhanced_objective, n_trials=75)
-```
 
-**Why Optuna?**
-- **Tree-structured Parzen Estimator (TPE)**: More efficient than grid search
-- **Pruning**: Stops unpromising trials early
-- **Parallel Execution**: Can run multiple trials simultaneously
-
-**Why 75 Trials?**
-- **Balance**: Enough exploration without excessive computation time
-- **Convergence**: Typically sufficient for finding good hyperparameters
-- **Practical**: Reasonable training time for production use
-
-**Enhanced Objective Function:**
-```python
 def enhanced_objective(trial):
-    early_stopping = EarlyStopping(monitor='val_loss', patience=15)
-    reduce_lr = ReduceLROnPlateau(monitor='val_loss', factor=0.5, patience=8)
+    model = create_improved_autoencoder(trial)
+
+    early_stopping = EarlyStopping(
+        monitor='val_loss',
+        patience=15,
+        restore_best_weights=True,
+        min_delta=1e-6
+    )
+
+    reduce_lr = ReduceLROnPlateau(
+        monitor='val_loss',
+        factor=0.5,
+        patience=8,
+        min_lr=1e-6,
+        verbose=0
+    )
+
+    history = model.fit(
+        X_train, X_train,
+        epochs=150,
+        batch_size=trial.suggest_int('batch_size', 8, 32, step=8),
+        validation_data=(X_val, X_val),
+        callbacks=[early_stopping, reduce_lr],
+        verbose=0
+    )
+
+    return min(history.history['val_loss'])
 ```
 
 **Why These Callbacks?**
+
 - **Early Stopping**: Prevents overfitting, saves training time
 - **Learning Rate Reduction**: Allows fine-tuning when progress stagnates
 - **Patience Values**: Balanced between premature stopping and excessive training
@@ -203,22 +280,26 @@ def enhanced_objective(trial):
 ### Cell 17: Enhanced Training Setup
 
 **Advanced Callbacks:**
+
 ```python
-checkpoint = ModelCheckpoint('best_inventory_autoencoder.keras', 
+checkpoint = ModelCheckpoint('best_inventory_autoencoder.keras',
                            monitor='val_loss', save_best_only=True)
 ```
 
 **Why Model Checkpointing?**
+
 - **Best Model Recovery**: Saves the best model during training
 - **Training Interruption**: Protects against training failures
 - **Modern Format (.keras)**: TensorFlow's recommended format
 
 **Optimizer Configuration:**
+
 ```python
 optimizer = Adam(learning_rate=learning_rate, clipnorm=1.0)
 ```
 
 **Why Adam with Gradient Clipping?**
+
 - **Adam**: Adaptive learning rates, handles sparse gradients well
 - **Gradient Clipping (1.0)**: Prevents exploding gradients
 - **Inventory Context**: Stable training for variable inventory patterns
@@ -238,17 +319,20 @@ thresholds = {
 ```
 
 **Why Multiple Thresholds?**
+
 - **Business Flexibility**: Different sensitivity levels for different use cases
 - **Conservative (99th percentile)**: Critical alerts only, minimal false positives
 - **Balanced (95th percentile)**: Standard operations, good precision-recall balance
 - **Sensitive (90th percentile)**: Early warning system, catches subtle anomalies
 
 **Reconstruction Error Calculation:**
+
 ```python
 reconstruction_errors = np.mean(np.square(X_scaled - predictions), axis=1)
 ```
 
 **Why Mean Squared Error?**
+
 - **Euclidean Distance**: Measures overall pattern deviation
 - **Feature Equality**: All inventory features contribute equally
 - **Interpretability**: Higher values clearly indicate more anomalous patterns
@@ -260,16 +344,19 @@ reconstruction_errors = np.mean(np.square(X_scaled - predictions), axis=1)
 ### Comprehensive Plotting Strategy
 
 **Time Series Plots:**
+
 - **Business Context**: Show anomalies in temporal business context
 - **Seasonal Patterns**: Identify seasonal anomaly trends
 - **Delivery Schedule**: Respect Monday/Saturday delivery windows
 
 **Inventory-Specific Analysis:**
+
 - **Category Breakdown**: Which inventory items drive anomalies?
 - **Ratio Analysis**: Are proportions unusual or just volumes?
 - **Correlation Patterns**: How do inventory categories relate?
 
 **Statistical Summary:**
+
 - **Quantitative Metrics**: Precise anomaly counts and percentages
 - **Business Insights**: Actionable information for operations
 
@@ -280,6 +367,7 @@ reconstruction_errors = np.mean(np.square(X_scaled - predictions), axis=1)
 ### Cell 28: Production-Ready Artifacts
 
 **Model Persistence:**
+
 ```python
 best_model.save('enhanced_inventory_autoencoder.keras')
 joblib.dump(scaler, 'robust_scaler_inventory.pkl')
@@ -287,17 +375,20 @@ joblib.dump(enhanced_model_config, 'enhanced_inventory_autoencoder_config.pkl')
 ```
 
 **Why These Artifacts?**
+
 - **.keras Format**: Modern, efficient, includes architecture and weights
 - **Separate Scaler**: Ensures identical preprocessing for new data
 - **Configuration File**: Complete metadata for reproducible inference
 
 **Feature Engineering Pipeline:**
+
 ```python
 def create_inventory_features(data):
     # Complete feature engineering pipeline
 ```
 
 **Why Packaged Pipeline?**
+
 - **Reproducibility**: Identical feature engineering for training and inference
 - **Maintainability**: Single source of truth for data processing
 - **Production Safety**: Reduces deployment errors
@@ -309,21 +400,25 @@ def create_inventory_features(data):
 ### Library Choices
 
 **TensorFlow/Keras:**
+
 - **Industry Standard**: Mature, well-supported deep learning framework
 - **Production Ready**: Excellent deployment tools and serving options
 - **Autoencoder Support**: Built-in layers and optimizers for autoencoder architectures
 
 **Optuna:**
+
 - **State-of-the-Art**: Most advanced hyperparameter optimization library
 - **Efficiency**: Intelligent search algorithms reduce training time
 - **Integration**: Seamless integration with machine learning frameworks
 
 **Scikit-learn (Preprocessing):**
+
 - **Reliability**: Battle-tested preprocessing tools
 - **Consistency**: Standard interface across different scalers and transformers
 - **Integration**: Works seamlessly with deep learning workflows
 
 **Pandas/NumPy (Data Handling):**
+
 - **Performance**: Optimized for numerical computations
 - **Functionality**: Rich set of data manipulation tools
 - **Ecosystem**: Standard tools in data science workflows
@@ -333,11 +428,13 @@ def create_inventory_features(data):
 **Why Autoencoder over Other Approaches?**
 
 1. **vs. Isolation Forest:**
+
    - Better at capturing complex, non-linear patterns
    - Learns inventory-specific representations
    - More interpretable reconstruction errors
 
 2. **vs. One-Class SVM:**
+
    - Handles high-dimensional data better
    - Learns hierarchical features
    - More scalable to larger datasets
@@ -348,6 +445,7 @@ def create_inventory_features(data):
    - Handles non-linear relationships
 
 **Why Deep Architecture?**
+
 - **Pattern Complexity**: Inventory patterns involve complex interactions
 - **Temporal Dependencies**: Multiple time scales (daily, weekly, seasonal)
 - **Multi-Category Learning**: Simultaneous modeling of 8+ inventory categories
@@ -355,16 +453,19 @@ def create_inventory_features(data):
 ### Performance Considerations
 
 **Training Efficiency:**
+
 - **Batch Size Optimization**: Balanced between memory usage and gradient stability
 - **Early Stopping**: Prevents unnecessary computation
 - **Hyperparameter Search**: Focused on practical ranges
 
 **Inference Speed:**
+
 - **Lightweight Architecture**: Efficient for real-time anomaly detection
 - **Preprocessing Pipeline**: Optimized feature engineering
 - **Model Format**: Fast loading and execution
 
 **Scalability:**
+
 - **Feature Engineering**: Linear complexity with data size
 - **Model Architecture**: Scales well with inventory categories
 - **Deployment**: Easy integration with production systems
@@ -372,11 +473,13 @@ def create_inventory_features(data):
 ### Business Alignment
 
 **Operational Requirements:**
+
 - **Interpretability**: Clear anomaly scores and category analysis
 - **Actionability**: Specific insights about which inventory items are anomalous
 - **Flexibility**: Multiple sensitivity levels for different business contexts
 
 **Integration Considerations:**
+
 - **Data Pipeline**: Works with existing inventory data formats
 - **Delivery Schedule**: Respects business constraints (Monday/Saturday)
 - **Maintenance**: Self-contained artifacts for easy deployment
