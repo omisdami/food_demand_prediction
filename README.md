@@ -30,3 +30,87 @@ Below are the key columns:
 | `dips`          | Dip cups used                                     |
 | `drinks`        | Fountain drinks served                            |
 | `flavours`      | Sauce flavor servings                             |
+
+---
+
+## 🧩 Project Structure & Roles
+
+### 👤 Bikash – Dataset Generation
+
+- Generate synthetic data if real data is unavailable
+- Simulate realistic patterns for sales, weather, traffic, and events
+
+---
+
+### 👥 Bikash & Callum – Data Collection & Preprocessing
+
+- Collect sales, foot traffic, weather, and event data
+- Clean, normalize, and merge datasets
+- Tools: `pandas`, `numpy`, `OpenWeather API`, `Google Places API`, Jupyter
+- Techniques: Missing value imputation, MinMaxScaler/StandardScaler, feature engineering (e.g., weekday, seasonality)
+
+---
+
+### 📈 Callum – Time Series Forecasting (ARIMA)
+
+- Build and tune ARIMA/SARIMA models for demand prediction
+- Tools: `statsmodels`, `pmdarima`, `matplotlib`, `seaborn`
+- Metrics: RMSE, MAE
+
+---
+
+### 📊 Friba – Regression Modeling (External Factors)
+
+- Use regression to model impact of weather, traffic, events
+- Combine predictions with ARIMA using ensemble/weighted average
+- Tools: `scikit-learn`, `GridSearchCV`
+- Algorithms: Linear Regression, Ridge/Lasso
+
+---
+
+### 🧠 Gavriel – Autoencoder for Anomaly Detection
+
+- Build a deep autoencoder to learn normal demand patterns
+- Detect unusual demand spikes/drops using reconstruction error
+- Tools: `TensorFlow/Keras`, `Optuna`, `pandas`, `numpy`
+
+---
+
+### 🔁 Gavriel – Model Integration & Post-Processing
+
+- Combine ARIMA + Regression outputs
+- Overlay anomaly alerts from autoencoder
+- Translate predictions into purchase orders using reorder logic
+- Techniques: Ensemble models, safety stock calculation, rounding logic
+
+---
+
+### 🌐 Bikash & Dami – Backend, Deployment & Dashboard
+
+- Build Flask APIs for model inference
+- Visualize outputs with Dash/Streamlit
+- Containerize app with Docker, optionally deploy with Gunicorn/Nginx
+- Tools: `Flask`, `Plotly Dash` or `Streamlit`, `Docker`
+
+---
+
+## 🛠️ Stack Overview
+
+- **Languages**: Python
+- **ML Libraries**: scikit-learn, statsmodels, pmdarima, TensorFlow/Keras
+- **Data Tools**: pandas, numpy, Jupyter
+- **Hyperparameter Tuning**: Optuna, GridSearchCV
+- **Visualization**: matplotlib, seaborn, Plotly, Streamlit
+- **APIs**: OpenWeather, Google Places
+- **Deployment**: Flask, Docker, Gunicorn, Nginx
+
+---
+
+## 📦 Output
+
+- Forecasted ingredient quantities for upcoming delivery dates
+- Anomaly detection alerts for unusual demand patterns
+- Purchase order recommendations with safety buffers
+- Interactive dashboard for monitoring and control
+
+---
