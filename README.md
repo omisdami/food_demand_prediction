@@ -57,6 +57,9 @@ uv run restaurant_forecast_tool.py --predict --model regression --days 14
 
 # Export forecasts to CSV
 uv run restaurant_forecast_tool.py --dataset data/your_data.csv --model regression --save-csv
+
+# Run with anomaly detection monitoring
+uv run restaurant_forecast_tool.py --dataset data/inventory_delivery_forecast_data.csv --anomaly-detection
 ```
 
 ### Training Individual Models
@@ -66,6 +69,9 @@ uv run inventory_forecasting_regression.py data/inventory_delivery_forecast_data
 
 # Train ARIMA models (requires statsmodels)
 uv run arima_forecasting.py data/inventory_delivery_forecast_data.csv
+
+# Train anomaly detection model (requires tensorflow)
+uv run autoencoder_anomaly_detection.py --train --dataset data/inventory_delivery_forecast_data.csv
 ```
 
 ---
@@ -80,23 +86,35 @@ Production Forecasting System/
 │   │   ├── ridge_model.pkl     # Runner-up
 │   │   ├── scaler.pkl          # Feature preprocessing
 │   │   └── feature_selector_info.pkl
-│   └── arima/                  # Failed: -4.3% accuracy
-│       ├── arima_*_model.pkl   # 8 individual models
-│       └── arima_metadata.pkl
+│   ├── arima/                  # Failed: -4.3% accuracy
+│   │   ├── arima_*_model.pkl   # 8 individual models
+│   │   └── arima_metadata.pkl
+│   └── autoencoder/            # Anomaly detection
+│       └── best_inventory_autoencoder.h5
+├── 🔍 Autoencoder/             # Anomaly detection system
+│   ├── inventory_autoencoder_model.h5  # Trained autoencoder
+│   ├── inventory_scaler.pkl            # Feature preprocessing
+│   ├── anomaly_threshold.json          # Detection thresholds
+│   ├── autoencoder_anomaly_detection.py # Detection engine
+│   └── Autoencoder.ipynb              # Development notebook
 ├── 📊 Results/
 │   ├── regression/             # Comprehensive analysis
 │   │   ├── plots/             # 4 visualization types
 │   │   └── manager_reports/   # Business-ready reports
-│   └── arima/                 # Failed model analysis
+│   ├── arima/                 # Failed model analysis
+│   └── autoencoder/           # Anomaly detection results
 ├── 🎯 Forecasts/
 │   ├── final/                 # Production forecasts
 │   │   ├── BEST_MODEL_FORECAST.txt
 │   │   └── BEST_MODEL_FORECAST.csv
 │   └── *.csv                  # Individual model outputs
-└── 🛠️ Tools/
-    ├── restaurant_forecast_tool.py    # Main interface
-    ├── inventory_forecasting_regression.py
-    └── arima_forecasting.py
+├── 📁 Data/
+│   ├── inventory_delivery_forecast_data.csv  # Main dataset
+│   └── *.csv                              # Additional datasets
+│
+├── restaurant_forecast_tool.py           # Main interface
+├── inventory_forecasting_regression.py   # Regression training
+└── arima_forecasting.py                 # ARIMA training
 ```
 
 ---
@@ -160,12 +178,14 @@ Production Forecasting System/
 - **Training Modes**: Fresh training or pre-trained model usage
 - **Export Options**: CSV, text reports, manager summaries
 - **Safety Calculations**: 20% buffer for inventory planning
+- **Anomaly Detection**: AI-powered unusual pattern detection
 
 ### 📊 Visualization Suite
 - **Model Performance**: MAE, R², cross-validation comparisons
 - **Time Series Plots**: Actual vs predicted for all items
 - **Residual Analysis**: Model assumption validation
 - **Error Distribution**: Performance consistency across items
+- **Anomaly Analysis**: Unusual inventory pattern identification
 
 ---
 
@@ -177,12 +197,14 @@ Production Forecasting System/
 - **Automated Recommendations**: Reduce manual planning time
 - **Safety Stock Integration**: Prevent stockouts with 20% buffer
 - **Weekend Intelligence**: Automatic demand pattern recognition
+- **Anomaly Detection**: Early warning system for unusual patterns
 
 ### 📈 Cost Savings
 - **Reduced Waste**: Prevent overordering with accurate forecasts
 - **Stockout Prevention**: Safety stock calculations minimize shortages
 - **Labor Efficiency**: Automated planning reduces manual effort
 - **Data-Driven Decisions**: Replace intuition with statistical models
+- **Quality Assurance**: Detect data errors and supply chain disruptions
 
 ---
 
@@ -208,10 +230,25 @@ uv run restaurant_forecast_tool.py --dataset data.csv --model both --save-csv
 # - forecasts/final/RESTAURANT_TOOL_FORECAST.csv
 ```
 
+### Anomaly Detection
+```bash
+# Run anomaly detection on historical data
+uv run restaurant_forecast_tool.py --dataset data.csv --anomaly-detection
+
+# Train new anomaly detection model
+uv run restaurant_forecast_tool.py --dataset data.csv --train-anomaly
+
+# Adjust sensitivity levels
+uv run restaurant_forecast_tool.py --dataset data.csv --anomaly-detection --anomaly-threshold sensitive
+```
+
 ### Production Deployment
 ```bash
 # Use pre-trained models for daily forecasting
 uv run restaurant_forecast_tool.py --predict --model regression --days 7
+
+# Daily forecasting with anomaly monitoring
+uv run restaurant_forecast_tool.py --predict --model regression --anomaly-detection --days 7
 
 # Automated daily forecasting (cron job example)
 0 6 * * * cd /path/to/project && uv run restaurant_forecast_tool.py --predict --model regression --save-csv
@@ -233,6 +270,7 @@ uv run restaurant_forecast_tool.py --predict --model regression --days 7
 - **Python 3.10+**: Primary language
 - **scikit-learn**: Regression models, preprocessing, validation
 - **statsmodels**: ARIMA/SARIMA time series models
+- **tensorflow/keras**: Autoencoder anomaly detection
 - **pandas/numpy**: Data manipulation and analysis
 - **matplotlib/seaborn**: Visualization and plotting
 
@@ -247,6 +285,7 @@ uv run restaurant_forecast_tool.py --predict --model regression --days 7
 - **TimeSeriesSplit**: Temporal cross-validation
 - **StandardScaler**: Feature preprocessing
 - **Correlation-based selection**: Feature engineering
+- **Optuna**: Autoencoder hyperparameter optimization
 
 ---
 
@@ -256,19 +295,21 @@ uv run restaurant_forecast_tool.py --predict --model regression --days 7
 - **Ensemble Methods**: Combine top 3 regression models
 - **Confidence Intervals**: Prediction uncertainty quantification
 - **Real-time Updates**: Daily model retraining pipeline
-- **Alert System**: Deviation notifications
+- **Enhanced Anomaly Detection**: Real-time alerts and notifications
 
 ### Medium-term Features
 - **External Data**: Weather, holidays, promotional events
 - **Advanced Features**: Interaction terms, polynomial features
 - **Multi-location Support**: Scale to multiple restaurants
 - **API Development**: REST API for system integration
+- **Anomaly Root Cause Analysis**: Identify why patterns are unusual
 
 ### Long-term Vision
 - **Deep Learning**: LSTM/GRU for complex patterns (with more data)
 - **Real-time Integration**: POS system connectivity
 - **Advanced Analytics**: Demand driver analysis
 - **AutoML Pipeline**: Automated model selection and tuning
+- **Predictive Anomaly Detection**: Forecast unusual patterns before they occur
 
 ---
 

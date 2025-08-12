@@ -17,7 +17,7 @@ TENDERS:
   Parameters: (3, 1, 2)
   Log Transformed: False
   External Regressors: ['day_of_week', 'is_weekend', 'month']
-  MAE: 138.96
+  MAE: 138.97
   RMSE: 205.42
   R²: -0.041
   AIC: 1005.52

@@ -29,6 +29,45 @@ except ImportError:
     def run_arima_pipeline(dataset_path=None):
         return None
 
+# Optional autoencoder anomaly detection functionality
+AUTOENCODER_AVAILABLE = False
+autoencoder_anomaly_detection = None
+
+def run_anomaly_detection(dataset_path, threshold_type='balanced'):
+    if AUTOENCODER_AVAILABLE:
+        return autoencoder_anomaly_detection.detect_anomalies(dataset_path, threshold_type)
+    else:
+        print("⚠️  Autoencoder functionality not available due to TensorFlow/NumPy compatibility issues.")
+        print("   To fix: downgrade NumPy with 'uv add numpy<2' or upgrade TensorFlow")
+        return None
+
+def train_anomaly_detector(dataset_path, n_trials=50):
+    if AUTOENCODER_AVAILABLE:
+        return autoencoder_anomaly_detection.train_autoencoder(dataset_path, n_trials)
+    else:
+        print("⚠️  Autoencoder functionality not available due to TensorFlow/NumPy compatibility issues.")
+        print("   To fix: downgrade NumPy with 'uv add numpy<2' or upgrade TensorFlow")
+        return None
+
+def check_anomaly_model_exists():
+    if AUTOENCODER_AVAILABLE:
+        required_files = [
+            'Autoencoder/inventory_autoencoder_model.h5',
+            'Autoencoder/inventory_scaler.pkl',
+            'Autoencoder/anomaly_threshold.json',
+            'Autoencoder/feature_columns.json'
+        ]
+        return all(os.path.exists(file) for file in required_files)
+    return False
+
+# Try to import autoencoder functionality
+try:
+    from Autoencoder import autoencoder_anomaly_detection
+    AUTOENCODER_AVAILABLE = True
+except ImportError as e:
+    AUTOENCODER_AVAILABLE = False
+    print(f"⚠️  Autoencoder functionality disabled due to import error: {str(e)[:100]}...")
+
 def load_regression_models():
     """Load all trained regression models and preprocessing objects"""
     try:
@@ -259,7 +298,7 @@ def make_arima_predictions(arima_models, model_metadata, forecast_features, targ
     
     return results
 
-def print_manager_report(forecast_df, target_cols, comparison_results=None):
+def print_manager_report(forecast_df, target_cols, comparison_results=None, anomaly_info=None):
     """Print a manager-friendly report to console"""
     
     print("\n" + "="*60)
@@ -279,6 +318,10 @@ def print_manager_report(forecast_df, target_cols, comparison_results=None):
     # Show comparison results if available
     if comparison_results:
         print(f"📊 Model Comparison: {comparison_results}")
+    
+    # Show anomaly detection results if available
+    if anomaly_info:
+        print(f"🚨 Anomaly Detection: {anomaly_info}")
     
     print("\n📊 DAILY RECOMMENDATIONS:")
     print("-" * 50)
@@ -382,6 +425,10 @@ def main():
     parser.add_argument('--model', choices=['regression', 'arima', 'both'], default='both', 
                        help='Which model type to use (default: both)')
     parser.add_argument('--predict', action='store_true', help='Use pre-trained models (skip training)')
+    parser.add_argument('--anomaly-detection', action='store_true', help='Run anomaly detection on historical data')
+    parser.add_argument('--train-anomaly', action='store_true', help='Train anomaly detection model')
+    parser.add_argument('--anomaly-threshold', choices=['conservative', 'balanced', 'sensitive'], 
+                       default='balanced', help='Anomaly detection sensitivity (default: balanced)')
     args = parser.parse_args()
     
     print("🍗 Restaurant Inventory Forecasting Tool")
@@ -429,6 +476,51 @@ def main():
     regression_forecast = None
     arima_forecast = None
     comparison_results = None
+    anomaly_info = None
+    
+    # Handle anomaly detection - auto-train if model doesn't exist
+    if args.dataset and AUTOENCODER_AVAILABLE:
+        # Check if anomaly model exists, if not train it automatically
+        if not check_anomaly_model_exists():
+            print("🔧 Anomaly detection model not found. Training automatically...")
+            print("   This is a one-time setup that may take a few minutes...")
+            train_anomaly_detector(args.dataset, n_trials=25)  # Reduced trials for faster initial setup
+            print("✅ Anomaly detection model trained successfully!")
+        else:
+            print("✅ Found existing anomaly detection model - ready for monitoring")
+        
+        # Run anomaly detection if requested
+        if args.anomaly_detection:
+            print("🔍 Running anomaly detection on historical data...")
+            anomaly_results = run_anomaly_detection(args.dataset, args.anomaly_threshold)
+            if anomaly_results is not None:
+                total_anomalies = anomaly_results['is_anomaly'].sum()
+                anomaly_percentage = 100 * total_anomalies / len(anomaly_results)
+                anomaly_info = f"{total_anomalies} anomalies detected ({anomaly_percentage:.1f}%)"
+                
+                if total_anomalies > 0:
+                    recent_anomalies = anomaly_results[anomaly_results['is_anomaly']].tail(5)
+                    print(f"\n🚨 Recent anomalous delivery windows:")
+                    for _, row in recent_anomalies.iterrows():
+                        print(f"   {row['delivery_date'].strftime('%Y-%m-%d')}: Total inventory {row['total_inventory']:.0f}")
+    elif args.dataset and not AUTOENCODER_AVAILABLE and (args.anomaly_detection or args.train_anomaly):
+        print("⚠️  Autoencoder functionality not available due to TensorFlow/NumPy compatibility issues.")
+        print("   To fix: downgrade NumPy with 'pip install numpy<2' or upgrade TensorFlow")
+    
+    # Handle explicit anomaly model training if requested
+    if args.train_anomaly:
+        if not args.dataset:
+            print("❌ Error: Dataset path is required for anomaly model training")
+            return
+        
+        if not AUTOENCODER_AVAILABLE:
+            print("⚠️  Autoencoder functionality not available due to TensorFlow/NumPy compatibility issues.")
+            print("   To fix: downgrade NumPy with 'pip install numpy<2' or upgrade TensorFlow")
+            return
+        
+        print("🔧 Re-training anomaly detection model with full optimization...")
+        train_anomaly_detector(args.dataset, n_trials=75)  # Full trials for explicit training
+        print("✅ Anomaly detection model training completed!")
     
     # Handle regression models
     if args.model in ['regression', 'both']:
@@ -545,7 +637,7 @@ def main():
         forecast_cols = [col for col in final_forecast.columns if col.endswith('_Forecast')]
         target_cols = [col.replace('_Forecast', '').lower() for col in forecast_cols]
     
-    print_manager_report(final_forecast, target_cols, comparison_results)
+    print_manager_report(final_forecast, target_cols, comparison_results, anomaly_info)
     
     # Save to CSV if requested
     if args.save_csv:
