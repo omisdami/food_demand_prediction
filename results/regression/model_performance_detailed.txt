@@ -1,0 +1,144 @@
+COMPREHENSIVE MODEL PERFORMANCE REPORT
+================================================================================
+
+🏆 BEST OVERALL MODEL: Lasso
+================================================================================
+
+PERFORMANCE SUMMARY
+--------------------------------------------------
+Model           Test MAE   CV MAE     R²       RMSE      
+--------------------------------------------------
+Linear Regression 24.88      41.83      0.856    41.05     
+Ridge           24.76      30.12      0.856    41.52     
+Lasso           23.36      23.09      0.871    39.80     
+ElasticNet      25.00      29.16      0.864    45.73     
+Random Forest   74.88      48.72      0.435    276.33    
+
+================================================================================
+
+DETAILED MODEL METRICS
+--------------------------------------------------
+
+Linear Regression:
+  Test Performance:
+    MAE: 24.879
+    RMSE: 41.053
+    R2: 0.856
+    Accuracy: 0.856
+  Cross-Validation MAE: 41.828
+  Best Hyperparameters: {}
+  Per-Target MAE:
+    wings: 46.89
+    tenders: 44.67
+    fries_reg: 16.53
+    fries_large: 16.53
+    veggies: 16.76
+    dips: 19.62
+    drinks: 15.89
+    flavours: 22.16
+
+Ridge:
+  Test Performance:
+    MAE: 24.759
+    RMSE: 41.519
+    R2: 0.856
+    Accuracy: 0.856
+  Cross-Validation MAE: 30.121
+  Best Hyperparameters: {'alpha': 0.1}
+  Per-Target MAE:
+    wings: 45.91
+    tenders: 44.43
+    fries_reg: 16.56
+    fries_large: 16.68
+    veggies: 16.86
+    dips: 19.73
+    drinks: 15.87
+    flavours: 22.02
+
+Lasso:
+  Test Performance:
+    MAE: 23.361
+    RMSE: 39.802
+    R2: 0.871
+    Accuracy: 0.871
+  Cross-Validation MAE: 23.085
+  Best Hyperparameters: {'alpha': 1.0}
+  Per-Target MAE:
+    wings: 43.66
+    tenders: 42.04
+    fries_reg: 13.71
+    fries_large: 15.49
+    veggies: 15.33
+    dips: 17.62
+    drinks: 16.28
+    flavours: 22.77
+
+ElasticNet:
+  Test Performance:
+    MAE: 25.000
+    RMSE: 45.733
+    R2: 0.864
+    Accuracy: 0.864
+  Cross-Validation MAE: 29.162
+  Best Hyperparameters: {'alpha': 0.1, 'l1_ratio': 0.9}
+  Per-Target MAE:
+    wings: 48.61
+    tenders: 44.23
+    fries_reg: 15.65
+    fries_large: 16.57
+    veggies: 16.66
+    dips: 20.10
+    drinks: 15.79
+    flavours: 22.38
+
+Random Forest:
+  Test Performance:
+    MAE: 74.881
+    RMSE: 276.327
+    R2: 0.435
+    Accuracy: 0.435
+  Cross-Validation MAE: 48.716
+  Best Hyperparameters: {'max_depth': 7, 'min_samples_split': 2, 'n_estimators': 200}
+  Per-Target MAE:
+    wings: 309.50
+    tenders: 91.66
+    fries_reg: 19.09
+    fries_large: 23.36
+    veggies: 23.36
+    dips: 52.49
+    drinks: 29.80
+    flavours: 49.80
+
+================================================================================
+
+SELECTED FEATURES (15):
+------------------------------
+ 1. fries_large_roll7
+ 2. veggies_roll7
+ 3. tenders_roll3
+ 4. fries_large_roll3
+ 5. days_since_start
+ 6. month
+ 7. veggies_roll3
+ 8. drinks_roll7
+ 9. drinks_roll3
+10. tenders_roll7
+11. day_of_week
+12. is_weekend
+13. wings_tenders_ratio
+14. fries_total
+15. total_food
+
+================================================================================
+
+KEY INSIGHTS:
+--------------------
+• Best performer: Lasso (MAE: 23.36)
+• Worst performer: Random Forest (MAE: 74.88)
+
+• Overfitting Analysis:
+  Linear Regression: Underfitting (Test-CV: -16.95)
+  Ridge: Underfitting (Test-CV: -5.36)
+  Lasso: Good (Test-CV: +0.28)
+  ElasticNet: Good (Test-CV: -4.16)
+  Random Forest: Potential overfitting (Test-CV: +26.17)

@@ -1,0 +1,8 @@
+Date,Day_of_Week,Is_Weekend,Wings_Forecast,Tenders_Forecast,Fries_Reg_Forecast,Fries_Large_Forecast,Veggies_Forecast,Dips_Forecast,Drinks_Forecast,Flavours_Forecast,Total_Food_Items,Wings_Recommended_Stock,Tenders_Recommended_Stock,Fries_Reg_Recommended_Stock,Fries_Large_Recommended_Stock,Veggies_Recommended_Stock,Dips_Recommended_Stock,Drinks_Recommended_Stock,Flavours_Recommended_Stock
+2024-12-31,Tuesday,False,3776,584,116,113,108,376,181,629,4697,4531,701,139,136,130,451,217,755
+2025-01-01,Wednesday,False,3779,571,116,113,108,376,181,631,4687,4535,685,139,136,130,451,217,757
+2025-01-02,Thursday,False,3776,574,116,113,108,376,182,633,4687,4531,689,139,136,130,451,218,760
+2025-01-03,Friday,False,3773,577,116,113,108,376,182,636,4687,4528,692,139,136,130,451,218,763
+2025-01-04,Saturday,True,3770,580,116,113,108,376,182,638,4687,4524,696,139,136,130,451,218,766
+2025-01-05,Sunday,True,3767,583,116,113,108,377,182,640,4687,4520,700,139,136,130,452,218,768
+2025-01-06,Monday,False,3785,565,116,113,108,376,181,627,4687,4542,678,139,136,130,451,217,752
